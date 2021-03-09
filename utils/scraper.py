@@ -1,16 +1,21 @@
 import pandas as pd
 
 class SubredditScraper:
-    def __init__(self, reddit_object, sub, lim=900, mode='w'):
+    def __init__(self, reddit_object, sub, seeds_set, seeding_iters, lim=900, mode='w'):
         self.sub = sub
         self.lim = lim
         self.mode = mode
+        self.seeds_set = seeds_set
+        self.seeds_iters = seeding_iters
         self.reddit = reddit_object
         print('SubredditScraper instance created with values: sub = {}, lim = {}, mode = {}'.format(sub, lim, mode))
 
+    def extract_important_keywords(post_content):
+        # TODO: for our seeding iterations, we need new interesting keywords to add to our seeding list for next round
+        return
+
     def get_posts(self):
         """Get unique posts from a specified subreddit."""
-
         sub_dict = {
             'selftext': [], 'title': [], 'id': [], 'sorted_by': [],
             'num_comments': [], 'score': [], 'ups': [], 'downs': [], 'dates': []}
@@ -24,8 +29,27 @@ class SubredditScraper:
         print('csv_loaded = {}'.format(csv_loaded))
 
         print('Collecting information from r/{}.'.format(self.sub))
-        subreddit_posts = self.reddit.subreddit(self.sub).top(limit=self.lim)
+        subreddit_posts = []
+        for iter in range(seeding_iters):
+            new_keyword_list = set()
 
+            # (1) find all posts that contain keywords in the seeding list
+            all_search_posts = []
+            for keyword in self.seeds_set:
+                curr_search_posts = self.reddit.subreddit(self.sub).search(query = keyword)
+                all_search_posts += curr_search_posts
+
+            # (2) remove duplicate posts (dedup)
+            unique_ids = set()
+            for post in all_search_posts:
+                if post.id not in unique_ids:
+                    unique_ids.add(post.id)
+                    subreddit_posts += post
+                    new_keyword_list.update(extract_important_keywords(post)) # (3) add all new possible keywords to our new seeding set for next round
+
+            self.seeds_list = new_keyword_list
+
+        # extract info from our final list of posts
         for post in subreddit_posts:
             # Check if post.id is in df and set to True if df is empty.
             # This way new posts are still added to dictionary when df = ''
