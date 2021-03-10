@@ -1,5 +1,7 @@
 import pandas as pd
 
+import calculations
+
 class SubredditScraper:
     def __init__(self, reddit_object, sub, seeds_set, seeding_iters, lim=900, mode='w'):
         self.sub = sub
@@ -9,10 +11,6 @@ class SubredditScraper:
         self.seeds_iters = seeding_iters
         self.reddit = reddit_object
         print('SubredditScraper instance created with values: sub = {}, lim = {}, mode = {}'.format(sub, lim, mode))
-
-    def extract_important_keywords(post_content):
-        # TODO: for our seeding iterations, we need new interesting keywords to add to our seeding list for next round
-        return
 
     def get_posts(self):
         """Get unique posts from a specified subreddit."""
@@ -29,10 +27,10 @@ class SubredditScraper:
         print('csv_loaded = {}'.format(csv_loaded))
 
         print('Collecting information from r/{}.'.format(self.sub))
+        initial_subreddit_posts = []
         subreddit_posts = []
+        unique_post_ids = set()
         for iter in range(seeding_iters):
-            new_keyword_list = set()
-
             # (1) find all posts that contain keywords in the seeding list
             all_search_posts = []
             for keyword in self.seeds_set:
@@ -40,12 +38,16 @@ class SubredditScraper:
                 all_search_posts += curr_search_posts
 
             # (2) remove duplicate posts (dedup)
-            unique_ids = set()
             for post in all_search_posts:
-                if post.id not in unique_ids:
-                    unique_ids.add(post.id)
-                    subreddit_posts += post
-                    new_keyword_list.update(extract_important_keywords(post)) # (3) add all new possible keywords to our new seeding set for next round
+                if post.id not in unique_post_ids:
+                    unique_post_ids.add(post.id)
+                    if iter == 0:
+                        initial_subreddit_posts += post
+                    else:
+                        subreddit_posts += post
+
+            # (3) add all new possible keywords to our new seeding set for next round
+            new_keyword_list, new_keyword_scores = calculations.calc_tfidf(posts_tokens)
 
             self.seeds_list = new_keyword_list
 
