@@ -1,2 +1,4 @@
 pandas
 praw
+sklearn
+numpy
