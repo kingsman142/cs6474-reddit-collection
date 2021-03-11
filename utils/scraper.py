@@ -47,9 +47,9 @@ class SubredditScraper:
                         subreddit_posts += post
 
             # (3) add all new possible keywords to our new seeding set for next round
-            new_keyword_list, new_keyword_scores = calculations.calc_tfidf(posts_tokens)
+            new_keyword_list, _ = calculations.calc_tfidf(posts_tokens)
 
-            self.seeds_list = new_keyword_list
+            self.seeds_set = new_keyword_list
 
         # extract info from our final list of posts
         for post in subreddit_posts:
