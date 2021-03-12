@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 
 import calculations
@@ -15,13 +16,13 @@ class SubredditScraper:
     def get_posts(self):
         """Get unique posts from a specified subreddit."""
         sub_dict = {
-            'selftext': [], 'title': [], 'id': [], 'sorted_by': [],
-            'num_comments': [], 'score': [], 'ups': [], 'downs': [], 'dates': []}
+            'selftext': [], 'title': [], 'id': [], 'num_comments': [],
+            'score': [], 'ups': [], 'downs': [], 'dates': []}
         csv = '{}_posts.csv'.format(self.sub)
 
         # Set csv_loaded to True if csv exists since you can't
         # evaluate the truth value of a DataFrame.
-        df, csv_loaded = (pd.read_csv(csv), True) if isfile(csv) else ('', False)
+        df, csv_loaded = (pd.read_csv(csv), True) if os.path.isfile(csv) else ('', False)
 
         print('csv = {}'.format(csv))
         print('csv_loaded = {}'.format(csv_loaded))
@@ -30,7 +31,7 @@ class SubredditScraper:
         initial_subreddit_posts = []
         subreddit_posts = []
         unique_post_ids = set()
-        for iter in range(seeding_iters):
+        for iter in range(self.seeds_iters):
             # (1) find all posts that contain keywords in the seeding list
             all_search_posts = []
             for keyword in self.seeds_set:
@@ -45,6 +46,9 @@ class SubredditScraper:
                         initial_subreddit_posts += post
                     else:
                         subreddit_posts += post
+
+            # TODO: princess' code will create a nested list here containing all tokens from all posts after cleaning the text
+            posts_tokens = None
 
             # (3) add all new possible keywords to our new seeding set for next round
             new_keyword_list, _ = calculations.calc_tfidf(posts_tokens)
@@ -62,7 +66,6 @@ class SubredditScraper:
                 sub_dict['selftext'].append(post.selftext)
                 sub_dict['title'].append(post.title)
                 sub_dict['id'].append(post.id)
-                sub_dict['sorted_by'].append(sort)
                 sub_dict['num_comments'].append(post.num_comments)
                 sub_dict['score'].append(post.score)
                 sub_dict['ups'].append(post.ups)
