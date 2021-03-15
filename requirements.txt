@@ -1,4 +1,5 @@
 pandas
 praw
 sklearn
+nltk
 numpy
