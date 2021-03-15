@@ -1,7 +1,10 @@
 import os
+from time import sleep
+
 import pandas as pd
 
-import calculations
+from utils.calculations import calc_tfidf
+from utils.tokenizer import tokenize
 
 class SubredditScraper:
     def __init__(self, reddit_object, sub, seeds_set, seeding_iters, lim=900, mode='w'):
@@ -43,15 +46,15 @@ class SubredditScraper:
                 if post.id not in unique_post_ids:
                     unique_post_ids.add(post.id)
                     if iter == 0:
-                        initial_subreddit_posts += post
+                        initial_subreddit_posts.append(post)
                     else:
-                        subreddit_posts += post
-
-            # TODO: princess' code will create a nested list here containing all tokens from all posts after cleaning the text
-            posts_tokens = None
+                        subreddit_posts.append(post)
+                        
+            # clean and tokenize post bodies
+            posts_tokens = tokenize(subreddit_posts)
 
             # (3) add all new possible keywords to our new seeding set for next round
-            new_keyword_list, _ = calculations.calc_tfidf(posts_tokens)
+            new_keyword_list, _ = calc_tfidf(posts_tokens)
 
             self.seeds_set = new_keyword_list
 
