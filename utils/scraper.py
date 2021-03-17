@@ -1,17 +1,20 @@
 import os
+from time import sleep
+
 import pandas as pd
 
-import calculations
+from utils.calculations import calc_tfidf
+from utils.tokenizer import tokenize
 
 class SubredditScraper:
-    def __init__(self, reddit_object, sub, seeds_set, seeding_iters, lim=900, mode='w'):
+    def __init__(self, reddit_object, sub, seeds_set, seeding_iters = 5, search_limit = 100, mode='w'):
         self.sub = sub
-        self.lim = lim
         self.mode = mode
         self.seeds_set = seeds_set
         self.seeds_iters = seeding_iters
         self.reddit = reddit_object
-        print('SubredditScraper instance created with values: sub = {}, lim = {}, mode = {}'.format(sub, lim, mode))
+        self.search_limit = search_limit
+        print('SubredditScraper instance created with values: sub = {}, mode = {}'.format(sub, mode))
 
     def get_posts(self):
         """Get unique posts from a specified subreddit."""
@@ -28,30 +31,42 @@ class SubredditScraper:
         print('csv_loaded = {}'.format(csv_loaded))
 
         print('Collecting information from r/{}.'.format(self.sub))
+        # NOTE: initial_subreddit_posts and subreddit_posts are separated so we can later analyze the quality of posts returned from our initial search vs. later searches.
+        #       besides that purpose, if we don't want to analyze their differences later, we can just drop initial_subreddit_posts and store everything in subreddit_posts.
         initial_subreddit_posts = []
         subreddit_posts = []
+
+        # seeding iterations
         unique_post_ids = set()
         for iter in range(self.seeds_iters):
+            print("=== Beginning iteration {}/{} of seeding ===".format(iter+1, self.seeds_iters))
             # (1) find all posts that contain keywords in the seeding list
-            all_search_posts = []
+            posts_across_all_searches = []
             for keyword in self.seeds_set:
-                curr_search_posts = self.reddit.subreddit(self.sub).search(query = keyword)
-                all_search_posts += curr_search_posts
+                curr_search_posts = self.reddit.subreddit(self.sub).search(query = keyword, limit = self.search_limit)
+                print("curr keyword: {}".format(keyword))
+                posts_across_all_searches += curr_search_posts
+            print("Number of posts returned: {}".format(len(posts_across_all_searches)))
 
             # (2) remove duplicate posts (dedup)
-            for post in all_search_posts:
+            print("Performing dedup of posts...")
+            for post in posts_across_all_searches:
                 if post.id not in unique_post_ids:
                     unique_post_ids.add(post.id)
                     if iter == 0:
-                        initial_subreddit_posts += post
+                        initial_subreddit_posts.append(post)
                     else:
-                        subreddit_posts += post
+                        subreddit_posts.append(post)
 
-            # TODO: princess' code will create a nested list here containing all tokens from all posts after cleaning the text
-            posts_tokens = None
+            # clean and tokenize post bodies (refer to comment above for variable definitions to see the difference between these two variables)
+            print("Cleaning posts...")
+            posts_tokens = tokenize(initial_subreddit_posts) if iter == 0 else tokenize(subreddit_posts)
+            print("Example list of post tokens: {}".format(posts_tokens[0]))
+            print(len(posts_tokens))
 
             # (3) add all new possible keywords to our new seeding set for next round
-            new_keyword_list, _ = calculations.calc_tfidf(posts_tokens)
+            print("Calculating tf-idf scores for tokens...")
+            new_keyword_list, _ = calc_tfidf(posts_tokens)
 
             self.seeds_set = new_keyword_list
 
