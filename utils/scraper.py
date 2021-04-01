@@ -1,4 +1,5 @@
 import os
+import nltk
 from time import sleep
 
 import pandas as pd
@@ -7,13 +8,17 @@ from utils.calculations import calc_tfidf
 from utils.tokenizer import tokenize
 
 class SubredditScraper:
-    def __init__(self, reddit_object, sub, seeds_set, seeding_iters = 5, search_limit = 100, mode='w'):
-        self.sub = sub
-        self.mode = mode
+    def __init__(self, reddit_object, actor, character, sub, seeds_set, seeding_iters = 5, search_limit = 100, actor_character_search_limit = 200, mode='w'):
+        self.sub = sub # the subreddit we're searching through
+        self.mode = mode # search mode (e.g. 'relevant', 'hot', 'new')
         self.seeds_set = seeds_set
-        self.seeds_iters = seeding_iters
+        self.seeds_iters = seeding_iters # the number of iterations for seeding
         self.reddit = reddit_object
         self.search_limit = search_limit
+
+        self.actor = actor # the name of the actual actor
+        self.character = character # the name of the character in the film
+        self.actor_character_search_limit = actor_character_search_limit
         print('SubredditScraper instance created with values: sub = {}, mode = {}'.format(sub, mode))
 
     def get_posts(self):
@@ -42,20 +47,29 @@ class SubredditScraper:
             print("=== Beginning iteration {}/{} of seeding ===".format(iter+1, self.seeds_iters))
             # (1) find all posts that contain keywords in the seeding list
             posts_across_all_searches = []
-            for keyword in self.seeds_set:
-                curr_search_posts = self.reddit.subreddit(self.sub).search(query = keyword, limit = self.search_limit)
-                print("curr keyword: {}".format(keyword))
-                posts_across_all_searches += curr_search_posts
+            if iter == 0: # in the first iteration, discover posts related to the actor and character's names
+                # find posts with actor/character names
+                posts_across_all_searches += self.reddit.subreddit(self.sub).search(query = self.actor, limit = 200)
+                posts_across_all_searches += self.reddit.subreddit(self.sub).search(query = self.character, limit = self.search_limit)
+            else:
+                for keyword in self.seeds_set:
+                    curr_search_posts = self.reddit.subreddit(self.sub).search(query = keyword, limit = self.search_limit)
+                    print("curr keyword: {}".format(keyword))
+                    posts_across_all_searches += curr_search_posts
             print("Number of posts returned: {}".format(len(posts_across_all_searches)))
 
             # (2) remove duplicate posts (dedup)
             print("Performing dedup of posts...")
             for post in posts_across_all_searches:
                 if post.id not in unique_post_ids:
-                    unique_post_ids.add(post.id)
                     if iter == 0:
-                        initial_subreddit_posts.append(post)
+                        # filter some of the posts down so the only ones remaining are the ones with keywords from the initial seeding list
+                        for word in nltk.word_tokenize(post.selftext):
+                            if word in self.seeds_set and post.id not in unique_post_ids:
+                                unique_post_ids.add(post.id)
+                                initial_subreddit_posts.append(post)
                     else:
+                        unique_post_ids.add(post.id)
                         subreddit_posts.append(post)
 
             # clean and tokenize post bodies (refer to comment above for variable definitions to see the difference between these two variables)
