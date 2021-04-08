@@ -8,7 +8,7 @@ from utils.calculations import calc_tfidf
 from utils.tokenizer import tokenize
 
 class SubredditScraper:
-    def __init__(self, reddit_object, actor, character, sub, seeds_set, seeding_iters = 5, search_limit = 100, actor_character_search_limit = 200, mode='w'):
+    def __init__(self, reddit_object, name_searched, sub, seeds_set, seeding_iters = 5, search_limit = 100, actor_character_search_limit = 400, mode='w'):
         self.sub = sub # the subreddit we're searching through
         self.mode = mode # search mode (e.g. 'relevant', 'hot', 'new')
         self.seeds_set = seeds_set
@@ -16,8 +16,7 @@ class SubredditScraper:
         self.reddit = reddit_object
         self.search_limit = search_limit
 
-        self.actor = actor # the name of the actual actor
-        self.character = character # the name of the character in the film
+        self.name_searched = name_searched # name of actor or character we're searching for
         self.actor_character_search_limit = actor_character_search_limit
         print('SubredditScraper instance created with values: sub = {}, mode = {}'.format(sub, mode))
 
@@ -26,7 +25,7 @@ class SubredditScraper:
         sub_dict = {
             'selftext': [], 'title': [], 'id': [], 'num_comments': [],
             'score': [], 'ups': [], 'downs': [], 'dates': []}
-        csv = '{}_posts.csv'.format(self.sub)
+        csv = '{}_posts.csv'.format(self.name_searched)
 
         # Set csv_loaded to True if csv exists since you can't
         # evaluate the truth value of a DataFrame.
@@ -40,6 +39,7 @@ class SubredditScraper:
         #       besides that purpose, if we don't want to analyze their differences later, we can just drop initial_subreddit_posts and store everything in subreddit_posts.
         initial_subreddit_posts = []
         subreddit_posts = []
+        analysis_dict = {"iteration": [], "keywords": [], "keyword_scores": [], "num_posts": [], "num_deduped_posts": []} # only used for logging purposes so we can analyze them later in the term
 
         # seeding iterations
         unique_post_ids = set()
@@ -49,8 +49,7 @@ class SubredditScraper:
             posts_across_all_searches = []
             if iter == 0: # in the first iteration, discover posts related to the actor and character's names
                 # find posts with actor/character names
-                posts_across_all_searches += self.reddit.subreddit(self.sub).search(query = self.actor, limit = 200)
-                posts_across_all_searches += self.reddit.subreddit(self.sub).search(query = self.character, limit = self.search_limit)
+                posts_across_all_searches += self.reddit.subreddit(self.sub).search(query = self.actor, limit = self.actor_character_search_limit)
             else:
                 for keyword in self.seeds_set:
                     curr_search_posts = self.reddit.subreddit(self.sub).search(query = keyword, limit = self.search_limit)
@@ -60,6 +59,7 @@ class SubredditScraper:
 
             # (2) remove duplicate posts (dedup)
             print("Performing dedup of posts...")
+            num_deduped_posts = 0
             for post in posts_across_all_searches:
                 if post.id not in unique_post_ids:
                     if iter == 0:
@@ -71,6 +71,8 @@ class SubredditScraper:
                     else:
                         unique_post_ids.add(post.id)
                         subreddit_posts.append(post)
+                else:
+                    num_deduped_posts += 1
 
             # clean and tokenize post bodies (refer to comment above for variable definitions to see the difference between these two variables)
             print("Cleaning posts...")
@@ -80,7 +82,14 @@ class SubredditScraper:
 
             # (3) add all new possible keywords to our new seeding set for next round
             print("Calculating tf-idf scores for tokens...")
-            new_keyword_list, _ = calc_tfidf(posts_tokens)
+            new_keyword_list, new_keyword_scores = calc_tfidf(posts_tokens)
+
+            # log some data that we can analyze later on
+            analysis_dict["iteration"].append(iter)
+            analysis_dict["keywords"].append(new_keyword_list)
+            analysis_dict["keyword_scores"].append(new_keyword_scores)
+            analysis_dict["num_posts"].append(len(unique_post_ids))
+            analysis_dict["num_deduped_posts"].append(num_deduped_posts)
 
             self.seeds_set = new_keyword_list
 
@@ -91,25 +100,32 @@ class SubredditScraper:
             unique_id = post.id not in tuple(df.id) if csv_loaded else True
 
             # Save any unique posts to sub_dict.
+            # base data format off of: https://raw.githubusercontent.com/camille2019/cs6474_twitter_data_collection/main/character_tweets.csv
             if unique_id:
-                sub_dict['selftext'].append(post.selftext)
+                sub_dict['tweet_id'].append(post.id) # actually reddit id but we need to make sure it conforms to the twitter data format above
+                sub_dict['author_id'].append(post.author.id)
+                sub_dict['date'].append(post.created_utc)
+                sub_dict['text'].append(post.selftext)
+                sub_dict['name_searched'].append(self.name_searched)
                 sub_dict['title'].append(post.title)
-                sub_dict['id'].append(post.id)
                 sub_dict['num_comments'].append(post.num_comments)
                 sub_dict['score'].append(post.score)
                 sub_dict['ups'].append(post.ups)
                 sub_dict['downs'].append(post.downs)
-                sub_dict['dates'].append(post.created_utc)
             sleep(0.1)
 
         new_df = pd.DataFrame(sub_dict)
+        analytics_df = pd.DataFrame(analysis_dict)
+        analytics_csv_name = "{}_analytics.csv".format(self.name_searched)
 
         # Add new_df to df if df exists then save it to a csv.
         if 'DataFrame' in str(type(df)) and self.mode == 'w':
             pd.concat([df, new_df], axis=0, sort=0).to_csv(csv, index=False)
+            analytics_df.to_csv(analytics_csv_name, index=False)
             print('{} new posts collected and added to {}'.format(len(new_df), csv))
         elif self.mode == 'w':
             new_df.to_csv(csv, index=False)
+            analytics_df.to_csv(analytics_csv_name, index=False)
             print('{} posts collected and saved to {}'.format(len(new_df), csv))
         else:
             print('{} posts were collected but they were not added to {} because mode was set to "{}"'.format(len(new_df), csv, self.mode))
