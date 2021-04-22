@@ -11,7 +11,7 @@ if not os.path.exists("reddit-predictions"):
     os.makedir("reddit-predictions")
 
 # load the hate speech detection model with 3 classes ("normal", "hate speech", "toxic")
-happy_tc = HappyTextClassification("BERT", "Hate-speech-CNERG/bert-base-uncased-hatexplain", 3)
+happy_tc = HappyTextClassification("BERT", "Hate-speech-CNERG/bert-base-uncased-hatexplain", 3) # https://github.com/hate-alert/HateXplain
 
 # iterate over all the reddit posts collected for each character
 for filename_index, filename in enumerate(all_reddit_filenames):
