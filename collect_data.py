@@ -19,13 +19,13 @@ seeds_set = ['racebend', 'black', 'white', 'color', 'divers', 'politic', 'rac', 
              'scare', 'trauma', 'ignor', 'monkey', 'gorilla', 'persecut', 'discriminat', 'prejudice', 'obscen', 'unwelcome', 'no', 'hassle', 'torment', 'irritat', 'aggravat', 'victim', 'aggress', 'crime', 'troll', 'dominat']
 
 # namesets
-dc_names = []
-dw_names = []
-jb_names = []
-marvel_names = []
-merlin_names = []
-sw_names = ['Finn', 'John Boyega']
-sh_names = []
+dc_names = ()
+dw_names = ()
+jb_names = ()
+marvel_names = ()
+merlin_names = ()
+sw_names = ('Finn', 'John Boyega')
+sh_names = ()
 
 # map subreddits to be searched for associated characters
 '''subreddits_to_names = {
