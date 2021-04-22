@@ -23,9 +23,8 @@ class SubredditScraper:
     def get_posts(self):
         """Get unique posts from a specified subreddit."""
         sub_dict = {
-            'selftext': [], 'title': [], 'id': [], 'num_comments': [],
-            'score': [], 'ups': [], 'downs': [], 'dates': []}
-        csv = '{}_posts.csv'.format(self.name_searched)
+            'tweet_id': [], 'author_id': [], 'date': [], 'text': [], 'name_searched': [],
+            'title': [], 'num_comments': [], 'score': [], 'ups': [], 'downs': [], 'subreddit': []}
 
         # Set csv_loaded to True if csv exists since you can't
         # evaluate the truth value of a DataFrame.
@@ -39,7 +38,7 @@ class SubredditScraper:
         #       besides that purpose, if we don't want to analyze their differences later, we can just drop initial_subreddit_posts and store everything in subreddit_posts.
         initial_subreddit_posts = []
         subreddit_posts = []
-        analysis_dict = {"iteration": [], "keywords": [], "keyword_scores": [], "num_posts": [], "num_deduped_posts": []} # only used for logging purposes so we can analyze them later in the term
+        analysis_dict = {"subreddit": [], "iteration": [], "keywords": [], "keyword_scores": [], "num_posts": [], "num_deduped_posts": []} # only used for logging purposes so we can analyze them later in the term
 
         # seeding iterations
         unique_post_ids = set()
@@ -85,6 +84,7 @@ class SubredditScraper:
             new_keyword_list, new_keyword_scores = calc_tfidf(posts_tokens)
 
             # log some data that we can analyze later on
+            analysis_dict["subreddit"].append(self.sub)
             analysis_dict["iteration"].append(iter)
             analysis_dict["keywords"].append(new_keyword_list)
             analysis_dict["keyword_scores"].append(new_keyword_scores)
@@ -112,20 +112,10 @@ class SubredditScraper:
                 sub_dict['score'].append(post.score)
                 sub_dict['ups'].append(post.ups)
                 sub_dict['downs'].append(post.downs)
+                sub_dict['subreddit'].append(self.sub)
             sleep(0.1)
 
         new_df = pd.DataFrame(sub_dict)
         analytics_df = pd.DataFrame(analysis_dict)
-        analytics_csv_name = "{}_analytics.csv".format(self.name_searched)
 
-        # Add new_df to df if df exists then save it to a csv.
-        if 'DataFrame' in str(type(df)) and self.mode == 'w':
-            pd.concat([df, new_df], axis=0, sort=0).to_csv(csv, index=False)
-            analytics_df.to_csv(analytics_csv_name, index=False)
-            print('{} new posts collected and added to {}'.format(len(new_df), csv))
-        elif self.mode == 'w':
-            new_df.to_csv(csv, index=False)
-            analytics_df.to_csv(analytics_csv_name, index=False)
-            print('{} posts collected and saved to {}'.format(len(new_df), csv))
-        else:
-            print('{} posts were collected but they were not added to {} because mode was set to "{}"'.format(len(new_df), csv, self.mode))
+        return new_df, analytics_df
