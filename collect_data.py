@@ -19,13 +19,22 @@ seeds_set = ['racebend', 'black', 'white', 'color', 'divers', 'politic', 'rac', 
              'scare', 'trauma', 'ignor', 'monkey', 'gorilla', 'persecut', 'discriminat', 'prejudice', 'obscen', 'unwelcome', 'no', 'hassle', 'torment', 'irritat', 'aggravat', 'victim', 'aggress', 'crime', 'troll', 'dominat']
 
 # namesets
-dc_names = ()
-dw_names = ()
-jb_names = ()
-marvel_names = ()
-merlin_names = ()
-sw_names = ('Finn', 'John Boyega')
-sh_names = ()
+dc_names = ('iris west', 'diggle', 'black canary', 'starfire', 'deadshot', 'candace patton', 'will smith', 'david ramsey',
+            'anna diop', 'jurnee smollett', 'harley', 'margot robbie', 'stephen mmell', 'oliver queen', 'green arrow', 'danielle panabaker', 'killer frost', 'jared leto', 'joker', 'mary elizabeth winstead', 'huntress')
+dis_names = ('ariel', 'little mermaid' 'halle bailey',
+             'emma watson', 'belle', 'cinderella', 'sleeping beauty', 'lily james', 'maleficent', 'angelina jolie', 'grace van dien')
+dw_names = ('bill potts', 'pearl mackie', 'clara oswald', 'jenna coleman', 'rose tyler',
+            'billie piper', 'freema agyeman', 'martha jones' 'jo martin', 'jodie whittaker', '13th doctor', '14th doctor')
+jb_names = ('bond', 'nomi', 'moneypenny', 'daniel craig',
+            'idris elba', 'lashana lynch', 'naomie harris', 'M', 'vesper lynd', 'madeleine swann', 'judi dench', 'eva green', 'lea seydoux', 'pierce brosnan')
+marvel_names = ('sam wilson', 'domino', 'valkyrie', 'nick fury', 'heimdall', 'anthony mackie', 'zazie beetz', 'tessa thompson', 'samuel l. jackson',
+                'idris elba', 'bucky', 'sebastian stan', 'miles morales', 'donald glover', 'peter parker', 'tom holland', 'mj', 'zendaya', 'black widow', 'scarlett johansson', 'jane foster', 'natalie portman', 'jeremy renner', 'hawkeye', 'rbianna hildebrand', 'negasonic teenage warhead')
+merlin_names = ('merlin', 'arthur', 'guinevere',
+                'colin morgan', 'bradley james', 'angel coulby')
+sw_names = ('finn', 'john boyega', 'kylo ren', 'rey',
+            'daisey ridley', 'jannah', 'naomie ackie')
+sh_names = ('abbie', 'crane', 'nicole beharie', 'tom mison')
+
 
 # map subreddits to be searched for associated characters
 '''subreddits_to_names = {
@@ -43,6 +52,7 @@ names_to_subreddits = {
     sw_names: ['/r/StarWars', 'r/StarWarsSpeculation', 'r/StarWarsCanon', '/r/Movies', '/r/SciFi', '/r/television'],
     marvel_names: ['/r/MarvelStudios', '/r/MarvelStudiosSpoilers', '/r/Movies', '/r/SciFi', '/r/television'],
     dc_names: ['/r/DCTV', 'r/theflash', 'r/titanstv', 'r/Arrowverse', '/r/Movies', '/r/SciFi', '/r/television'],
+    dis_names: ['/r/Movies', 'r/Disney'],
     merlin_names: ['/r/merlinbbc', '/r/Movies', '/r/SciFi', '/r/television'],
     sh_names: ['/r/SleepyHollow', 'r/SleepyHollowTV', '/r/Movies', '/r/SciFi', '/r/television'],
     dw_names: ['/r/DoctorWho', '/r/gallifrey', '/r/Movies', '/r/SciFi', '/r/television'],
@@ -51,16 +61,20 @@ names_to_subreddits = {
 
 for (names, subreddits) in names_to_subreddits.items():
     for name in names:
-        final_posts_df = pd.DataFrame({'tweet_id': [], 'author_id': [], 'date': [], 'text': [], 'name_searched': [], 'title': [], 'num_comments': [], 'score': [], 'ups': [], 'downs': [], 'subreddit': []})
-        final_analytics_df = pd.DataFrame({"subreddit": [], "iteration": [], "keywords": [], "keyword_scores": [], "num_posts": [], "num_deduped_posts": []})
+        final_posts_df = pd.DataFrame({'tweet_id': [], 'author_id': [], 'date': [], 'text': [], 'name_searched': [
+        ], 'title': [], 'num_comments': [], 'score': [], 'ups': [], 'downs': [], 'subreddit': []})
+        final_analytics_df = pd.DataFrame({"subreddit": [], "iteration": [], "keywords": [
+        ], "keyword_scores": [], "num_posts": [], "num_deduped_posts": []})
         for subreddit in subreddits:
             # collect data for this character/actor in this specific subreddit
-            scraper = scraper.SubredditScraper(reddit_object = reddit, sub = sr, name_searched = nm, seeds_set = seeds_set, seeding_iters = 5, search_limit = 50)
+            scraper = scraper.SubredditScraper(
+                reddit_object=reddit, sub=sr, name_searched=nm, seeds_set=seeds_set, seeding_iters=5, search_limit=50)
             subreddit_posts_df, subreddit_analytics_df = scraper.get_posts()
 
             # attach this subreddit's data to an ongoing dataframe we're constructing containing all this character/actor's data
             final_posts_df = pd.concat([final_posts_df, subreddit_posts_df])
-            final_analytics_df = pdf.concat([final_analytics_df, subreddit_analytics_df])
+            final_analytics_df = pdf.concat(
+                [final_analytics_df, subreddit_analytics_df])
 
         posts_csv = '{}_posts.csv'.format(name)
         analytics_csv_name = "{}_analytics.csv".format(name)
@@ -68,5 +82,7 @@ for (names, subreddits) in names_to_subreddits.items():
         # save both CSVs to file
         final_posts_df.to_csv(posts_csv, index=False)
         final_analytics_df.to_csv(analytics_csv_name, index=False)
-        print('{} posts collected and saved to {}'.format(len(final_posts_df), posts_csv))
-        print('{} events logged (for analytics) and saved to {}'.format(len(final_analytics_df), analytics_csv_name))
+        print('{} posts collected and saved to {}'.format(
+            len(final_posts_df), posts_csv))
+        print('{} events logged (for analytics) and saved to {}'.format(
+            len(final_analytics_df), analytics_csv_name))
