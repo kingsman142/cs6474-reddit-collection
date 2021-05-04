@@ -3,3 +3,4 @@ praw
 sklearn
 nltk
 numpy
+happytransformer
